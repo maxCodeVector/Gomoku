@@ -3,10 +3,8 @@ import random
 import time
 import os
 import math
-import chess as Ouyang
-import chess_v2 as Xiaohao
-# import chess_v3 as Xiaohao
-# import game_tree_gomoku as Ouyang
+import chess as greed
+import chess_tree as tree
 
 COLOR_BLACK = -1
 COLOR_WHITE = 1
@@ -18,7 +16,7 @@ white = []
 
 
 def cc():
-    os.system("cls")
+    os.system("clear")
 
 
 def change(ch):
@@ -54,21 +52,7 @@ class Board(object):
                     print(change(self.board[x][y]), end=' ')
             print()
         color = self.board[self.dec[0]][self.dec[1]]
-        if self.judge(self.dec, color):
-            print("%s win" % change(color))
-            # print(black[0])
-            print('max black: ', max(black))
-            # print(white[0])
-            print('max white: ', max(white))
-
-
-            for i in range(len(black)):
-                print("%d&black&3&%.2f  \\\\"%(2*i+1, black[i]))
-
-            for i in range(len(white)):
-                print("%d&white&3&%.2f  \\\\"%(2*i+2, white[i]))
-
-            exit(0)
+        return self.judge(self.dec, color)
 
     def judge(self, node, color):
         size = self.board.shape[0]
@@ -76,10 +60,10 @@ class Board(object):
         r2 = range(node[0] + 1, min(node[0] + 5, size))
         r3 = range(node[1] - 1, max(node[1] - 5, -1), -1)
         r4 = range(node[1] + 1, min(node[1] + 5, size))
-        d1 = (list(zip([node[0]] * 5, r3)), list(zip([node[0]] * 5, r4)))
-        d2 = (list(zip(r1, [node[1]] * 5)), list(zip(r2, [node[1]] * 5)))
-        d3 = (list(zip(r1, r3)), list(zip(r2, r4)))
-        d4 = (list(zip(r1, r4)), list(zip(r2, r3)))
+        d1 = list(zip([node[0]] * 5, r3)), list(zip([node[0]] * 5, r4))
+        d2 = list(zip(r1, [node[1]] * 5)), list(zip(r2, [node[1]] * 5))
+        d3 = list(zip(r1, r3)), list(zip(r2, r4))
+        d4 = list(zip(r1, r4)), list(zip(r2, r3))
         chessboard = self.board
 
         def __number(dir):
@@ -101,7 +85,7 @@ class Board(object):
                 return True
         return False
 
-    def load(self, ai: Ouyang.AI):
+    def load(self, ai):
         diction = ai.candidate_list[-1]
         assert self.board[diction[0]][diction[1]] == COLOR_NONE
         self.board[diction[0]][diction[1]] = ai.color
@@ -118,27 +102,21 @@ class Board(object):
                 self.board[int(seg[0])][int(seg[1])] = int(seg[2])
 
 
-def main(ab):
+def main():
     size = 15
     time_delay = 1
     chessboard = Board(size)
-    if ab == 0:
-        ouyang = Xiaohao.AI(size, COLOR_BLACK, time_delay)
-        hao = Xiaohao.AI(size, COLOR_WHITE, time_delay)
-    elif ab == 1:
-        ouyang = Ouyang.AI(size, COLOR_BLACK, time_delay)
-        hao = Xiaohao.AI(size, COLOR_WHITE, time_delay)
-    else:
-        ouyang = Xiaohao.AI(size, COLOR_BLACK, time_delay)
-        hao = Ouyang.AI(size, COLOR_WHITE, time_delay)
+    tree_ai = tree.AI(size, COLOR_BLACK, time_delay)
+    greed_ai = greed.AI(size, COLOR_WHITE, time_delay)
+
     # chessboard.read('chess_log.txt')
     end1 = False
     end2 = False
     while not (end1 or end2):
         start1 = time.time()
-        ouyang.go(chessboard.board)
+        tree_ai.go(chessboard.board)
         cost1 = time.time() - start1
-        chessboard.load(ouyang)
+        chessboard.load(tree_ai)
         end1 = chessboard.show()
         black.append(cost1)
         if cost1 > 15:
@@ -146,16 +124,20 @@ def main(ab):
             break
         # time.sleep(1)
         start = time.time()
-        hao.go(chessboard.board)
+        greed_ai.go(chessboard.board)
         cost = time.time()-start
-        chessboard.load(hao)
+        chessboard.load(greed_ai)
         end2 = chessboard.show()
         white.append(cost)
         # if cost > 15:
         #     print('\033[1;35m o cost > 5s: %fs!\033[0m' % cost)
         #     break
         # time.sleep(1)
+    if end1:
+        print("tree win")
+    if end2:
+        print("greedy win")
 
 
 if __name__ == '__main__':
-   main(1) # 1 ab white 2 ab black 0 two ab
+    main()
