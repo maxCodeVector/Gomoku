@@ -13,6 +13,20 @@ S = [[0, 0, 0, 0, 16000], [0, 5, 20, 60, 16000], [1, 30, 60, 800, 16000]]
 L = [[0, 0, 0, 0, 4000], [0, 1, 10, 40, 4000], [0, 20, 30, 500, 4000]]
 
 
+def match(pattern, dest):
+    """
+    judge if dest contain a special pattern
+    :param pattern:
+    :param dest:
+    :return: true if contains, otherwise false
+    """
+    pattern_len = len(pattern)
+    for i in range(len(dest) - pattern_len):
+        if np.where(pattern ^ dest[i:i + pattern_len] == 0)[0].shape[0] == pattern_len:
+            return True
+    return False
+
+
 # don't change the class name
 class AI(object):
     # chessboard_size, color, time_out passed from agent
@@ -31,6 +45,7 @@ class AI(object):
         # Clear candidate_list
         self.candidate_list.clear()
 
+        self.alpha_beta_cutoff_search(chessboard, None, cutoff_test=self.terminal_test)
         if len(self.candidate_list) == 0:
             self.__random_p(chessboard)
 
@@ -47,10 +62,32 @@ class AI(object):
         # Add your decision into candidate_list, Records the chess board
         self.candidate_list.append(new_pos)
 
+    def terminal_test(self, state, action):
+        """
+        test if the state with next action will be terminal
+        :param state: in this case, state is current chess board
+        :param action: the next position that a player want to go, format:(x, y, role)
+        :return: true means game over, otherwise continue
+        """
+        role = action[2]
+        x = action[0]
+        y = action[1]
+        state[x][y] = role
+        fivePattern = np.array([role]*5)
+        directions = ((1, 0), (0, 1), (1, 1), (1, -1))  # column, row, diag, re-diag
+        for dir in directions:
+            dest = [state[x+i*dir[0]][y+i*dir[1]] for i in range(-4, 5)
+                    if 0 <= x+i*dir[0] < self.chessboard_size and 0 <= y+i*dir[1] < self.chessboard_size]
+            if match(fivePattern, dest):
+                state[x][y] = COLOR_NONE
+                return True
+        state[x][y] = COLOR_NONE
+        return False
+
     def alpha_beta_cutoff_search(self, state, game, d=4, cutoff_test=None, eval_fn=None):
         infinity = 10000
 
-        player = game.to_move(state)
+        # player = game.to_move(state)
 
         def max_value(state, alpha, beta, depth):
             if cutoff_test(state, depth):
@@ -81,7 +118,7 @@ class AI(object):
         cutoff_test = (cutoff_test or
                        (lambda action, depth: depth >= d or game.terminal_test(state)))
 
-        eval_fn = eval_fn or (lambda state: game.utility(state, player))
+        # eval_fn = eval_fn or (lambda state: game.utility(state, player))
 
         best_score = -infinity
         beta = infinity
@@ -93,6 +130,20 @@ class AI(object):
                 best_score = v
                 best_action = action
         return best_action
+
+    def get_actions(self, chessboard):
+        actions = []
+        checked = np.array((self.chessboard_size, self.chessboard_size), dtype=int)
+        idx = np.where(chessboard != COLOR_NONE)
+        idx = list(zip(idx[0], idx[1]))
+        for node in idx:
+
+            for child in self.get_childs(node):
+                if chessboard[child[0]][child[1]] == COLOR_NONE and not checked[child[0]][child[1]]:
+                    actions.append(child)
+                    checked[child[0]][child[1]] = 1
+
+        return actions
 
     def get_childs(self, node):
         res = []
