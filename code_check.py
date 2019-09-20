@@ -169,6 +169,6 @@ class CodeCheck():
 
 
 if __name__ == '__main__':
-    cc = CodeCheck('./chess_v3.py', 15)
+    cc = CodeCheck('./chess_tree.py', 15)
     cc.check_code()
     print(cc.errormsg, '\ncase: ', cc.errorcase)
