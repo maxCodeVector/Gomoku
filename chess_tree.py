@@ -21,7 +21,7 @@ def match(pattern, dest):
     :return: true if contains, otherwise false
     """
     pattern_len = len(pattern)
-    for i in range(len(dest) - pattern_len):
+    for i in range(len(dest) - pattern_len+1):
         if np.where(pattern ^ dest[i:i + pattern_len] == 0)[0].shape[0] == pattern_len:
             return True
     return False
@@ -45,7 +45,9 @@ class AI(object):
         # Clear candidate_list
         self.candidate_list.clear()
 
-        self.alpha_beta_cutoff_search(chessboard, None, cutoff_test=self.terminal_test)
+        action = self.alpha_beta_cutoff_search(chessboard, eval_fn=self.eval_fn)
+        if action:
+            self.candidate_list.append(action)
         if len(self.candidate_list) == 0:
             self.__random_p(chessboard)
 
@@ -64,59 +66,113 @@ class AI(object):
 
     def terminal_test(self, state, action):
         """
-        test if the state with next action will be terminal
+        test if the state with next action will be terminal, noted that this action has been done
         :param state: in this case, state is current chess board
         :param action: the next position that a player want to go, format:(x, y, role)
         :return: true means game over, otherwise continue
         """
-        role = action[2]
         x = action[0]
         y = action[1]
-        state[x][y] = role
+        role = state[action]
+        # state[x][y] = role
         fivePattern = np.array([role]*5)
         directions = ((1, 0), (0, 1), (1, 1), (1, -1))  # column, row, diag, re-diag
         for dir in directions:
             dest = [state[x+i*dir[0]][y+i*dir[1]] for i in range(-4, 5)
                     if 0 <= x+i*dir[0] < self.chessboard_size and 0 <= y+i*dir[1] < self.chessboard_size]
             if match(fivePattern, dest):
-                state[x][y] = COLOR_NONE
+                # state[x][y] = COLOR_NONE
                 return True
-        state[x][y] = COLOR_NONE
+        # state[x][y] = COLOR_NONE
         return False
 
-    def alpha_beta_cutoff_search(self, state, game, d=4, cutoff_test=None, eval_fn=None):
+    def eval_fn(self, state, action):
+        """
+        evaluate current state if do this action, noted that this action has been done, but it may be different from
+        function terminal_test
+        :param state: in this case, state is current chess board
+        :param action: the next position that a player want to go, format:(x, y, role)
+        :return: a number represented current score
+        """
+        x = action[0]
+        y = action[1]
+        role = state[x][y]
+        self_score = 0
+        competitor_score = 0
+        fivePattern = np.array([1] * 5) # 成五
+        live4Pattern = np.array([0, 1, 1, 1, 1, 0]) # 活四
+        live3Pattern = np.array([0, 1, 1, 1, 0]) # 活三
+        rush4Pattern1 = np.array([-1, 1, 1, 1, 1, 0]) # 冲四
+        rush4Pattern2 = np.array([0, 1, 1, 1, 1, -1]) # 冲四
+
+        directions = ((1, 0), (0, 1), (1, 1), (1, -1))  # column, row, diag, re-diag
+        for dir in directions:
+            state[x][y] = role
+            dest = [state[x + i * dir[0]][y + i * dir[1]] for i in range(-4, 5)
+                    if 0 <= x + i * dir[0] < self.chessboard_size and 0 <= y + i * dir[1] < self.chessboard_size]
+            if match(fivePattern*role, dest):
+                self_score += S[2][4]
+            elif match(live4Pattern*role, dest):
+                self_score += S[2][3]
+            elif match(live3Pattern*role, dest):
+                self_score += S[2][2]
+            elif match(rush4Pattern1*role, dest) or match(rush4Pattern2*role, dest):
+                self_score += S[1][3]
+
+            state[x][y] = -role
+            dest = [state[x + i * dir[0]][y + i * dir[1]] for i in range(-4, 5)
+                    if 0 <= x + i * dir[0] < self.chessboard_size and 0 <= y + i * dir[1] < self.chessboard_size]
+            if match(fivePattern * -role, dest):
+                competitor_score += S[2][4]
+            elif match(live4Pattern * -role, dest):
+                competitor_score += S[2][3]
+            elif match(live3Pattern * -role, dest):
+                competitor_score += S[2][2]
+            elif match(rush4Pattern1 * -role, dest) or match(rush4Pattern2 * -role, dest):
+                competitor_score += S[1][3]
+
+        state[x][y] = role
+        return self_score + competitor_score
+
+
+
+    def alpha_beta_cutoff_search(self, state, d=1, cutoff_test=None, eval_fn=None):
         infinity = 10000
 
         # player = game.to_move(state)
 
-        def max_value(state, alpha, beta, depth):
-            if cutoff_test(state, depth):
-                return eval_fn(state)
+        def max_value(state, action, alpha, beta, depth):
+            if cutoff_test(state, action, depth):
+                return eval_fn(state, action)
 
             v = -infinity
-            for action in game.actions(state):
-                v = max(v, min_value(game.result(state, action),
+            for action in self.get_all_actions(state):
+                state[action] = self.color
+                v = max(v, min_value(state, action,
                                      alpha, beta, depth + 1))
+                state[action] = COLOR_NONE
                 if v >= beta:
                     return v
                 alpha = max(alpha, v)
             return v
 
-        def min_value(state, alpha, beta, depth):
-            if cutoff_test(state, depth):
-                return eval_fn(state)
+        def min_value(state, action, alpha, beta, depth):
+            if cutoff_test(state, action, depth):
+                return eval_fn(state, action)
 
             v = infinity
-            for action in game.actions(state):
-                v = min(v, max_value(game.result(state, action),
+            for action in self.get_all_actions(state):
+                state[action] = -self.color
+                v = min(v, max_value(state, action,
                                      alpha, beta, depth + 1))
+                state[action] = COLOR_NONE
                 if v <= alpha:
                     return v
                 beta = min(beta, v)
             return v
 
         cutoff_test = (cutoff_test or
-                       (lambda action, depth: depth >= d or game.terminal_test(state)))
+                       (lambda state, action, depth: depth >= d or self.terminal_test(state, action)))
 
         # eval_fn = eval_fn or (lambda state: game.utility(state, player))
 
@@ -124,22 +180,24 @@ class AI(object):
         beta = infinity
         best_action = None
 
-        for action in game.actions(state):
-            v = min_value(game.result(state, action), best_score, beta, 1)
+        for action in self.get_all_actions(state):
+            state[action] = self.color
+            v = min_value(state, action, best_score, beta, 1)
+            state[action] = COLOR_NONE
             if v > best_score:
                 best_score = v
                 best_action = action
         return best_action
 
-    def get_actions(self, chessboard):
+    def get_all_actions(self, chessboard):
         actions = []
-        checked = np.array((self.chessboard_size, self.chessboard_size), dtype=int)
+        checked = np.zeros((self.chessboard_size, self.chessboard_size), dtype=int)
         idx = np.where(chessboard != COLOR_NONE)
         idx = list(zip(idx[0], idx[1]))
         for node in idx:
 
             for child in self.get_childs(node):
-                if chessboard[child[0]][child[1]] == COLOR_NONE and not checked[child[0]][child[1]]:
+                if chessboard[child] == COLOR_NONE and not checked[child]:
                     actions.append(child)
                     checked[child[0]][child[1]] = 1
 
@@ -148,21 +206,21 @@ class AI(object):
     def get_childs(self, node):
         res = []
         size = self.chessboard_size - 1
-        tag = node[2] + 1
+        # tag = node[2] + 1
         if node[0] > 0:
-            res.append((node[0] - 1, node[1], tag))
+            res.append((node[0] - 1, node[1]))
             if node[1] < size:
-                res.append((node[0] - 1, node[1] + 1, tag))
+                res.append((node[0] - 1, node[1] + 1))
             if node[1] > 0:
-                res.append((node[0] - 1, node[1] - 1, tag))
+                res.append((node[0] - 1, node[1] - 1))
         if node[1] > 0:
-            res.append((node[0], node[1] - 1, tag))
+            res.append((node[0], node[1] - 1))
         if node[0] < size:
-            res.append((node[0] + 1, node[1], tag))
+            res.append((node[0] + 1, node[1]))
             if node[1] < size:
-                res.append((node[0] + 1, node[1] + 1, tag))
+                res.append((node[0] + 1, node[1] + 1))
             if node[1] > 0:
-                res.append((node[0] + 1, node[1] - 1, tag))
+                res.append((node[0] + 1, node[1] - 1))
         if node[1] < size:
-            res.append((node[0], node[1] + 1, tag))
+            res.append((node[0], node[1] + 1))
         return res

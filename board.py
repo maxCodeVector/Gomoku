@@ -112,15 +112,13 @@ def main():
     # chessboard.read('chess_log.txt')
     end1 = False
     end2 = False
-    while not (end1 or end2):
+    for i in range(size**2):
         start1 = time.time()
         tree_ai.go(chessboard.board)
         cost1 = time.time() - start1
         chessboard.load(tree_ai)
         end1 = chessboard.show()
-        black.append(cost1)
-        if cost1 > 15:
-            print('\033[1;35m * cost > 5s: %fs!\033[0m' % cost1)
+        if end1:
             break
         # time.sleep(1)
         start = time.time()
@@ -128,10 +126,8 @@ def main():
         cost = time.time()-start
         chessboard.load(greed_ai)
         end2 = chessboard.show()
-        white.append(cost)
-        # if cost > 15:
-        #     print('\033[1;35m o cost > 5s: %fs!\033[0m' % cost)
-        #     break
+        if end2:
+            break
         # time.sleep(1)
     if end1:
         print("tree win")

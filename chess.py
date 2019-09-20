@@ -60,6 +60,9 @@ class AI(object):
         random.seed(time.time())
         idx = np.where(chessboard == COLOR_NONE)
         idx = list(zip(idx[0], idx[1]))
+        if len(idx) == 0:
+            print("game draw")
+            exit(0)
         pos_idx = random.randint(0, len(idx) - 1)
         new_pos = idx[pos_idx]
         # ==============Find new pos========================================
