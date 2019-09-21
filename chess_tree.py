@@ -102,8 +102,8 @@ class AI(object):
         fivePattern = np.array([1] * 5) # 成五
         live4Pattern = np.array([0, 1, 1, 1, 1, 0]) # 活四
         live3Pattern = np.array([0, 1, 1, 1, 0]) # 活三
-        rush4Pattern1 = np.array([-1, 1, 1, 1, 1, 0]) # 冲四
-        rush4Pattern2 = np.array([0, 1, 1, 1, 1, -1]) # 冲四
+        rush4Pattern1 = np.array([-1, 1, 1, 1, 1, 0]) # 冲四1
+        rush4Pattern2 = np.array([0, 1, 1, 1, 1, -1]) # 冲四2
 
         directions = ((1, 0), (0, 1), (1, 1), (1, -1))  # column, row, diag, re-diag
         for dir in directions:
@@ -146,7 +146,7 @@ class AI(object):
                 return eval_fn(state, action)
 
             v = -infinity
-            for action in self.get_all_actions(state):
+            for action in self.get_actions(state):
                 state[action] = self.color
                 v = max(v, min_value(state, action,
                                      alpha, beta, depth + 1))
@@ -161,7 +161,7 @@ class AI(object):
                 return eval_fn(state, action)
 
             v = infinity
-            for action in self.get_all_actions(state):
+            for action in self.get_actions(state):
                 state[action] = -self.color
                 v = min(v, max_value(state, action,
                                      alpha, beta, depth + 1))
@@ -180,7 +180,7 @@ class AI(object):
         beta = infinity
         best_action = None
 
-        for action in self.get_all_actions(state):
+        for action in self.get_actions(state):
             state[action] = self.color
             v = min_value(state, action, best_score, beta, 1)
             state[action] = COLOR_NONE
@@ -189,7 +189,7 @@ class AI(object):
                 best_action = action
         return best_action
 
-    def get_all_actions(self, chessboard):
+    def get_actions(self, chessboard, filter=10):
         actions = []
         checked = np.zeros((self.chessboard_size, self.chessboard_size), dtype=int)
         idx = np.where(chessboard != COLOR_NONE)
@@ -201,6 +201,9 @@ class AI(object):
                     actions.append(child)
                     checked[child[0]][child[1]] = 1
 
+        return self.action_filter(actions)
+
+    def action_filter(self, actions):
         return actions
 
     def get_childs(self, node):

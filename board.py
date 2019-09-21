@@ -2,8 +2,7 @@ import numpy as np
 import random
 import time
 import os
-import math
-import chess as greed
+from old_algorithm import chess as greed
 import chess_tree as tree
 
 COLOR_BLACK = -1
