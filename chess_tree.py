@@ -21,7 +21,7 @@ def match(pattern, dest):
     :return: true if contains, otherwise false
     """
     pattern_len = len(pattern)
-    for i in range(len(dest) - pattern_len+1):
+    for i in range(len(dest) - pattern_len + 1):
         if np.where(pattern ^ dest[i:i + pattern_len] == 0)[0].shape[0] == pattern_len:
             return True
     return False
@@ -73,13 +73,13 @@ class AI(object):
         """
         x = action[0]
         y = action[1]
-        role = state[action]
+        role = state[x][y]
         # state[x][y] = role
-        fivePattern = np.array([role]*5)
+        fivePattern = np.array([role] * 5)
         directions = ((1, 0), (0, 1), (1, 1), (1, -1))  # column, row, diag, re-diag
         for dir in directions:
-            dest = [state[x+i*dir[0]][y+i*dir[1]] for i in range(-4, 5)
-                    if 0 <= x+i*dir[0] < self.chessboard_size and 0 <= y+i*dir[1] < self.chessboard_size]
+            dest = [state[x + i * dir[0]][y + i * dir[1]] for i in range(-4, 5)
+                    if 0 <= x + i * dir[0] < self.chessboard_size and 0 <= y + i * dir[1] < self.chessboard_size]
             if match(fivePattern, dest):
                 # state[x][y] = COLOR_NONE
                 return True
@@ -99,24 +99,24 @@ class AI(object):
         role = state[x][y]
         self_score = 0
         competitor_score = 0
-        fivePattern = np.array([1] * 5) # 成五
-        live4Pattern = np.array([0, 1, 1, 1, 1, 0]) # 活四
-        live3Pattern = np.array([0, 1, 1, 1, 0]) # 活三
-        rush4Pattern1 = np.array([-1, 1, 1, 1, 1, 0]) # 冲四1
-        rush4Pattern2 = np.array([0, 1, 1, 1, 1, -1]) # 冲四2
+        fivePattern = np.array([1] * 5)  # 成五
+        live4Pattern = np.array([0, 1, 1, 1, 1, 0])  # 活四
+        live3Pattern = np.array([0, 1, 1, 1, 0])  # 活三
+        rush4Pattern1 = np.array([-1, 1, 1, 1, 1, 0])  # 冲四1
+        rush4Pattern2 = np.array([0, 1, 1, 1, 1, -1])  # 冲四2
 
         directions = ((1, 0), (0, 1), (1, 1), (1, -1))  # column, row, diag, re-diag
         for dir in directions:
             state[x][y] = role
             dest = [state[x + i * dir[0]][y + i * dir[1]] for i in range(-4, 5)
                     if 0 <= x + i * dir[0] < self.chessboard_size and 0 <= y + i * dir[1] < self.chessboard_size]
-            if match(fivePattern*role, dest):
+            if match(fivePattern * role, dest):
                 self_score += S[2][4]
-            elif match(live4Pattern*role, dest):
+            elif match(live4Pattern * role, dest):
                 self_score += S[2][3]
-            elif match(live3Pattern*role, dest):
+            elif match(live3Pattern * role, dest):
                 self_score += S[2][2]
-            elif match(rush4Pattern1*role, dest) or match(rush4Pattern2*role, dest):
+            elif match(rush4Pattern1 * role, dest) or match(rush4Pattern2 * role, dest):
                 self_score += S[1][3]
 
             state[x][y] = -role
@@ -134,16 +134,14 @@ class AI(object):
         state[x][y] = role
         return self_score + competitor_score
 
-
-
-    def alpha_beta_cutoff_search(self, state, d=1, cutoff_test=None, eval_fn=None):
-        infinity = 10000
+    def alpha_beta_cutoff_search(self, state, d=3, cutoff_test=None, eval_fn=None):
+        infinity = 1e300
 
         # player = game.to_move(state)
 
         def max_value(state, action, alpha, beta, depth):
             if cutoff_test(state, action, depth):
-                return eval_fn(state, action)
+                return -eval_fn(state, action)
 
             v = -infinity
             for action in self.get_actions(state):
@@ -152,9 +150,9 @@ class AI(object):
                                      alpha, beta, depth + 1))
                 state[action] = COLOR_NONE
                 if v >= beta:
-                    return v
+                    return -v
                 alpha = max(alpha, v)
-            return v
+            return -v
 
         def min_value(state, action, alpha, beta, depth):
             if cutoff_test(state, action, depth):

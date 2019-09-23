@@ -10,9 +10,11 @@ import traceback
 import sys
 import os
 import numpy as np
+
 # from timeout_decorator import timeout
 
 FORBIDDEN_LIST = ['import os', 'exec']
+
 
 class CodeCheck():
     def __init__(self, script_file_path, chessboard_size):

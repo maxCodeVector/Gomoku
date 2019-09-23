@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import sys
 from code_check import CodeCheck
+
+
 def main():
     code_checker = CodeCheck("chess_tree.py", 15)
     if not code_checker.check_code():
@@ -8,7 +10,6 @@ def main():
     else:
         print('pass')
 
+
 if __name__ == '__main__':
     main()
-
-

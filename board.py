@@ -111,7 +111,7 @@ def main():
     # chessboard.read('chess_log.txt')
     end1 = False
     end2 = False
-    for i in range(size**2):
+    for i in range(size ** 2):
         start1 = time.time()
         tree_ai.go(chessboard.board)
         cost1 = time.time() - start1
@@ -122,7 +122,7 @@ def main():
         # time.sleep(1)
         start = time.time()
         greed_ai.go(chessboard.board)
-        cost = time.time()-start
+        cost = time.time() - start
         chessboard.load(greed_ai)
         end2 = chessboard.show()
         if end2:
