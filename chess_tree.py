@@ -1,8 +1,7 @@
-import numpy as np
 import random
-import queue
 import time
-from operator import *
+
+import numpy as np
 
 COLOR_BLACK = -1
 COLOR_WHITE = 1
@@ -52,10 +51,10 @@ class AI(object):
             self.__random_p(chessboard)
 
     def __random_p(self, chessboard):
-        random.seed(time.time())
+        np.random.seed(0)
         idx = np.where(chessboard == COLOR_NONE)
         idx = list(zip(idx[0], idx[1]))
-        pos_idx = random.randint(0, len(idx) - 1)
+        pos_idx = np.random.randint(0, len(idx) - 1)
         new_pos = idx[pos_idx]
         # ==============Find new pos========================================
         # Make sure that the position of your decision in chess board is empty.
@@ -104,35 +103,38 @@ class AI(object):
         live3Pattern = np.array([0, 1, 1, 1, 0])  # 活三
         rush4Pattern1 = np.array([-1, 1, 1, 1, 1, 0])  # 冲四1
         rush4Pattern2 = np.array([0, 1, 1, 1, 1, -1])  # 冲四2
+        score_item_list = [
+            (fivePattern, S[2][4]),
+            (live4Pattern, S[2][3]),
+            (live3Pattern, S[2][2]),
+            (rush4Pattern1, S[2][2]),
+            (rush4Pattern2, S[1][3]),
+        ]
 
         directions = ((1, 0), (0, 1), (1, 1), (1, -1))  # column, row, diag, re-diag
         for dir in directions:
+
             state[x][y] = role
             dest = [state[x + i * dir[0]][y + i * dir[1]] for i in range(-4, 5)
                     if 0 <= x + i * dir[0] < self.chessboard_size and 0 <= y + i * dir[1] < self.chessboard_size]
-            if match(fivePattern * role, dest):
-                self_score += S[2][4]
-            elif match(live4Pattern * role, dest):
-                self_score += S[2][3]
-            elif match(live3Pattern * role, dest):
-                self_score += S[2][2]
-            elif match(rush4Pattern1 * role, dest) or match(rush4Pattern2 * role, dest):
-                self_score += S[1][3]
+            for score_item in score_item_list:
+                if match(score_item[0]*role, dest):
+                    self_score += score_item[1]
+                    break
 
             state[x][y] = -role
             dest = [state[x + i * dir[0]][y + i * dir[1]] for i in range(-4, 5)
                     if 0 <= x + i * dir[0] < self.chessboard_size and 0 <= y + i * dir[1] < self.chessboard_size]
-            if match(fivePattern * -role, dest):
-                competitor_score += S[2][4]
-            elif match(live4Pattern * -role, dest):
-                competitor_score += S[2][3]
-            elif match(live3Pattern * -role, dest):
-                competitor_score += S[2][2]
-            elif match(rush4Pattern1 * -role, dest) or match(rush4Pattern2 * -role, dest):
-                competitor_score += S[1][3]
+            for score_item in score_item_list:
+                if match(score_item[0] * -role, dest):
+                    competitor_score += score_item[1]
+                    break
 
         state[x][y] = role
-        return self_score + competitor_score
+        final_score = self_score + competitor_score
+        # if role == self.color:
+        #     return -final_score
+        return final_score
 
     def alpha_beta_cutoff_search(self, state, d=3, cutoff_test=None, eval_fn=None):
         infinity = 1e300
@@ -141,28 +143,33 @@ class AI(object):
 
         def max_value(state, action, alpha, beta, depth):
             if cutoff_test(state, action, depth):
-                return -eval_fn(state, action)
+                return eval_fn(state, action)
 
             v = -infinity
+            wait_queue = dict()
             for action in self.get_actions(state):
                 state[action] = self.color
-                v = max(v, min_value(state, action,
-                                     alpha, beta, depth + 1))
+                wait_queue[action] = min_value(state, action,
+                                     alpha, beta, depth + 1)
+                v = max(v, wait_queue[action])
+                wait_queue[action] = v
                 state[action] = COLOR_NONE
                 if v >= beta:
-                    return -v
+                    return v
                 alpha = max(alpha, v)
-            return -v
+            return v
 
         def min_value(state, action, alpha, beta, depth):
             if cutoff_test(state, action, depth):
                 return eval_fn(state, action)
 
             v = infinity
+            wait_queue = dict()
             for action in self.get_actions(state):
                 state[action] = -self.color
-                v = min(v, max_value(state, action,
-                                     alpha, beta, depth + 1))
+                wait_queue[action] = max_value(state, action,
+                           alpha, beta, depth + 1)
+                v = min(v, wait_queue[action])
                 state[action] = COLOR_NONE
                 if v <= alpha:
                     return v
@@ -177,11 +184,13 @@ class AI(object):
         best_score = -infinity
         beta = infinity
         best_action = None
+        wait_queue = dict()
 
         for action in self.get_actions(state):
             state[action] = self.color
             v = min_value(state, action, best_score, beta, 1)
             state[action] = COLOR_NONE
+            wait_queue[action] = v
             if v > best_score:
                 best_score = v
                 best_action = action
