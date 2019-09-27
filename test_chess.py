@@ -53,7 +53,7 @@ def check_terminal():
 import unittest
 
 
-class MyTest(unittest.TestCase):  # 继承unittest.TestCase
+class StopTest(unittest.TestCase):  # 继承unittest.TestCase
 
     def test_tree_score_termial(self):
         """
@@ -135,6 +135,8 @@ class MyTest(unittest.TestCase):  # 继承unittest.TestCase
         res = ai.candidate_list[-1]
         assert res == (3, 3) or res == (3, 1) or res == (3, 6)
 
+
+class GenerateTest(unittest.TestCase):  # 继承unittest.TestCase
     def test_tree_gen_terminal(self):
         chessboard = Board(15)
         chessboard.board[3][2] = chess_tree.COLOR_WHITE
@@ -190,5 +192,10 @@ if __name__ == '__main__':
     check_match_live4()
     check_match_live3()
     check_match_rush4()
-    unittest.main()  # 运行所有的测试用例
-    print("all test passed!")
+    # unittest.main()  # 运行所有的测试用例
+    # 此用法可以同时测试多个类
+    suite1 = unittest.TestLoader().loadTestsFromTestCase(StopTest)
+    suite2 = unittest.TestLoader().loadTestsFromTestCase(GenerateTest)
+    suite = unittest.TestSuite([suite1, suite2])
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    # print("all test passed!")

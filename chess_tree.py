@@ -93,6 +93,21 @@ class AI(object):
         :param action: the next position that a player want to go, format:(x, y, role)
         :return: a number represented current score
         """
+        competitor_score, self_score = self.utility(action, state)
+        final_score = self_score + competitor_score
+        if state[action[0]][action[1]] != self.color:
+            return -final_score
+        # if competitor_score > 0:
+        #     competitor_score = 16000 - competitor_score
+        return final_score
+
+    def utility(self, action, state):
+        """
+        evlaue current blackboard two player's state with this action
+        :param action: the action
+        :param state: current blackboard
+        :return: two score for self and competitor respectively
+        """
         x = action[0]
         y = action[1]
         role = state[x][y]
@@ -110,7 +125,6 @@ class AI(object):
             (rush4Pattern1, S[2][2]),
             (rush4Pattern2, S[1][3]),
         ]
-
         directions = ((1, 0), (0, 1), (1, 1), (1, -1))  # column, row, diag, re-diag
         for dir in directions:
 
@@ -118,7 +132,7 @@ class AI(object):
             dest = [state[x + i * dir[0]][y + i * dir[1]] for i in range(-4, 5)
                     if 0 <= x + i * dir[0] < self.chessboard_size and 0 <= y + i * dir[1] < self.chessboard_size]
             for score_item in score_item_list:
-                if match(score_item[0]*role, dest):
+                if match(score_item[0] * role, dest):
                     self_score += score_item[1]
                     break
 
@@ -129,12 +143,8 @@ class AI(object):
                 if match(score_item[0] * -role, dest):
                     competitor_score += score_item[1]
                     break
-
         state[x][y] = role
-        final_score = self_score + competitor_score
-        # if role == self.color:
-        #     return -final_score
-        return final_score
+        return competitor_score, self_score
 
     def alpha_beta_cutoff_search(self, state, d=3, cutoff_test=None, eval_fn=None):
         infinity = 1e300
@@ -150,9 +160,8 @@ class AI(object):
             for action in self.get_actions(state):
                 state[action] = self.color
                 wait_queue[action] = min_value(state, action,
-                                     alpha, beta, depth + 1)
+                                     alpha, beta, depth + 1) - depth
                 v = max(v, wait_queue[action])
-                wait_queue[action] = v
                 state[action] = COLOR_NONE
                 if v >= beta:
                     return v
@@ -168,7 +177,7 @@ class AI(object):
             for action in self.get_actions(state):
                 state[action] = -self.color
                 wait_queue[action] = max_value(state, action,
-                           alpha, beta, depth + 1)
+                           alpha, beta, depth + 1) - depth
                 v = min(v, wait_queue[action])
                 state[action] = COLOR_NONE
                 if v <= alpha:
