@@ -85,26 +85,7 @@ class AI(object):
         # state[x][y] = COLOR_NONE
         return False
 
-    def eval_fn(self, state, action):
-        """
-        evaluate current state if do this action, noted that this action has been done, but it may be different from
-        function terminal_test
-        :param state: in this case, state is current chess board
-        :param action: the next position that a player want to go, format:(x, y, role)
-        :return: a number represented current score
-        """
-        competitor_score, self_score = self.utility(action, state)
-        attack_flag = self_score < competitor_score
-        if attack_flag:
-            return competitor_score, attack_flag
-        else:
-            return self_score, attack_flag
-        # final_score = max(self_score, competitor_score)
-        # if state[action[0]][action[1]] != self.color:
-        #     return -final_score
-        # if competitor_score > 0:
-        #     competitor_score = 16000 - competitor_score
-        # return final_score
+
 
     def utility(self, action, state):
         """
@@ -157,6 +138,29 @@ class AI(object):
         state[x][y] = role
         return competitor_score, self_score
 
+    def eval_fn(self, state, action):
+        """
+        evaluate current state if do this action, noted that this action has been done, but it may be different from
+        function terminal_test
+        :param state: in this case, state is current chess board
+        :param action: the next position that a player want to go, format:(x, y, role)
+        :return: a number represented current score
+        """
+        competitor_score, self_score = self.utility(action, state)
+        # attack_flag represent if current role is being attacked
+        attack_flag = self_score < competitor_score
+        if attack_flag:
+            return competitor_score, attack_flag
+        else:
+            return self_score, attack_flag
+        # final_score = max(self_score, competitor_score)
+        # if state[action[0]][action[1]] != self.color:
+        #     return -final_score
+        # if competitor_score > 0:
+        #     competitor_score = 16000 - competitor_score
+        # return final_score
+
+
     def capture_max_value(self, v, state, action):
         # if()
         pass
@@ -179,44 +183,48 @@ class AI(object):
             best_action = None
             for action in self.get_actions(state):
                 state[action] = self.color
-                info = min_value(state, action, alpha, beta, depth + 1)
-                wait_queue[action] = info[0]
-                attack_queue[action] = info[1]
+                score, attack = min_value(state, action, alpha, beta, depth + 1)
+                if attack:
+                    wait_queue[action] = -score
+                else:
+                    wait_queue[action] = score
+
                 # if info[1]:
                 #     wait_queue[action] = -info[0]
 
                 # wait_queue[action] = min_value(state, action,
                 #                      alpha, beta, depth + 1) - depth
-                if v < wait_queue[action]:
-                    v = wait_queue[action]
+                if v < score:
                     best_action = action
-                v = max(v, wait_queue[action])
+                    v = score
                 state[action] = COLOR_NONE
-                # if v >= beta:
-                #     return v
+                if v >= beta:
+                    return v, False
                 alpha = max(alpha, v)
-            return v, attack_queue[best_action]
+            return wait_queue[best_action], False
 
         def min_value(state, action, alpha, beta, depth):
             if cutoff_test(state, action, depth):
-                return eval_fn(state, action)[0]
+                return eval_fn(state, action)
 
             v = infinity
             wait_queue = dict()
             for action in self.get_actions(state):
                 state[action] = -self.color
-                info = max_value(state, action, alpha, beta, depth + 1)
-                if info[1]:
-                    wait_queue[action] = -info[0]
+                score, attack = max_value(state, action, alpha, beta, depth + 1)
+                if attack:
+                    wait_queue[action] = -score
+                else:
+                    wait_queue[action] = score
 
                 # wait_queue[action] = -max_value(state, action,
                 #            alpha, beta, depth + 1) + depth
                 v = min(v, wait_queue[action])
                 state[action] = COLOR_NONE
-                # if v <= alpha:
-                #     return v
+                if v <= alpha:
+                    return v, False
                 beta = min(beta, v)
-            return v
+            return v, False
 
         cutoff_test = (cutoff_test or
                        (lambda state, action, depth: depth >= d or self.terminal_test(state, action)))
@@ -230,7 +238,7 @@ class AI(object):
 
         for action in self.get_actions(state):
             state[action] = self.color
-            v = min_value(state, action, best_score, beta, 1)
+            v, _ = min_value(state, action, best_score, beta, 1)
             state[action] = COLOR_NONE
             wait_queue[action] = v
             if v > best_score:
