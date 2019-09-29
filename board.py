@@ -119,7 +119,7 @@ def main():
         end1 = chessboard.show()
         if end1:
             break
-        time.sleep(1)
+        # time.sleep(1)
         start = time.time()
         greed_ai.go(chessboard.board)
         cost = time.time() - start
@@ -127,7 +127,7 @@ def main():
         end2 = chessboard.show()
         if end2:
             break
-        time.sleep(1)
+        # time.sleep(1)
     if end1:
         print("tree win")
     if end2:

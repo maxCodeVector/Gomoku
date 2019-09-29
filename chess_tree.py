@@ -94,12 +94,17 @@ class AI(object):
         :return: a number represented current score
         """
         competitor_score, self_score = self.utility(action, state)
-        final_score = max(self_score, competitor_score)
-        if state[action[0]][action[1]] != self.color:
-            return -final_score
+        attack_flag = self_score < competitor_score
+        if attack_flag:
+            return competitor_score, attack_flag
+        else:
+            return self_score, attack_flag
+        # final_score = max(self_score, competitor_score)
+        # if state[action[0]][action[1]] != self.color:
+        #     return -final_score
         # if competitor_score > 0:
         #     competitor_score = 16000 - competitor_score
-        return final_score
+        # return final_score
 
     def utility(self, action, state):
         """
@@ -152,6 +157,13 @@ class AI(object):
         state[x][y] = role
         return competitor_score, self_score
 
+    def capture_max_value(self, v, state, action):
+        # if()
+        pass
+
+
+
+
     def alpha_beta_cutoff_search(self, state, d=3, cutoff_test=None, eval_fn=None):
         infinity = 1e300
 
@@ -163,27 +175,42 @@ class AI(object):
 
             v = -infinity
             wait_queue = dict()
+            attack_queue = dict
+            best_action = None
             for action in self.get_actions(state):
                 state[action] = self.color
-                wait_queue[action] = min_value(state, action,
-                                     alpha, beta, depth + 1) - depth
+                info = min_value(state, action, alpha, beta, depth + 1)
+                wait_queue[action] = info[0]
+                attack_queue[action] = info[1]
+                # if info[1]:
+                #     wait_queue[action] = -info[0]
+
+                # wait_queue[action] = min_value(state, action,
+                #                      alpha, beta, depth + 1) - depth
+                if v < wait_queue[action]:
+                    v = wait_queue[action]
+                    best_action = action
                 v = max(v, wait_queue[action])
                 state[action] = COLOR_NONE
                 # if v >= beta:
                 #     return v
                 alpha = max(alpha, v)
-            return v
+            return v, attack_queue[best_action]
 
         def min_value(state, action, alpha, beta, depth):
             if cutoff_test(state, action, depth):
-                return eval_fn(state, action)
+                return eval_fn(state, action)[0]
 
             v = infinity
             wait_queue = dict()
             for action in self.get_actions(state):
                 state[action] = -self.color
-                wait_queue[action] = -max_value(state, action,
-                           alpha, beta, depth + 1) + depth
+                info = max_value(state, action, alpha, beta, depth + 1)
+                if info[1]:
+                    wait_queue[action] = -info[0]
+
+                # wait_queue[action] = -max_value(state, action,
+                #            alpha, beta, depth + 1) + depth
                 v = min(v, wait_queue[action])
                 state[action] = COLOR_NONE
                 # if v <= alpha:
