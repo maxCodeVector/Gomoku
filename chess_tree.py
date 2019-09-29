@@ -94,7 +94,7 @@ class AI(object):
         :return: a number represented current score
         """
         competitor_score, self_score = self.utility(action, state)
-        final_score = self_score + competitor_score
+        final_score = max(self_score, competitor_score)
         if state[action[0]][action[1]] != self.color:
             return -final_score
         # if competitor_score > 0:
@@ -113,13 +113,19 @@ class AI(object):
         role = state[x][y]
         self_score = 0
         competitor_score = 0
-        fivePattern = np.array([1] * 5)  # 成五
+        live_fivePattern = np.array([0, 1, 1, 1, 1, 1, 0])  # 成五
+        rush_fivePattern1 = np.array([-1, 1, 1, 1, 1, 1, 0])  # 成五
+        rush_fivePattern2 = np.array([0, 1, 1, 1, 1, 1, -1])  # 成五
+        common_fivePattern = np.array([1] * 5)  # 成五
         live4Pattern = np.array([0, 1, 1, 1, 1, 0])  # 活四
         live3Pattern = np.array([0, 1, 1, 1, 0])  # 活三
         rush4Pattern1 = np.array([-1, 1, 1, 1, 1, 0])  # 冲四1
         rush4Pattern2 = np.array([0, 1, 1, 1, 1, -1])  # 冲四2
         score_item_list = [
-            (fivePattern, S[2][4]),
+            (live_fivePattern, S[2][4]),
+            (rush_fivePattern1, S[2][4]-10),
+            (rush_fivePattern2, S[2][4]-10),
+            (common_fivePattern, S[2][4]-10),
             (live4Pattern, S[2][3]),
             (live3Pattern, S[2][2]),
             (rush4Pattern1, S[2][2]),
@@ -129,7 +135,7 @@ class AI(object):
         for dir in directions:
 
             state[x][y] = role
-            dest = [state[x + i * dir[0]][y + i * dir[1]] for i in range(-4, 5)
+            dest = [state[x + i * dir[0]][y + i * dir[1]] for i in range(-6, 7)
                     if 0 <= x + i * dir[0] < self.chessboard_size and 0 <= y + i * dir[1] < self.chessboard_size]
             for score_item in score_item_list:
                 if match(score_item[0] * role, dest):
@@ -137,7 +143,7 @@ class AI(object):
                     break
 
             state[x][y] = -role
-            dest = [state[x + i * dir[0]][y + i * dir[1]] for i in range(-4, 5)
+            dest = [state[x + i * dir[0]][y + i * dir[1]] for i in range(-6, 7)
                     if 0 <= x + i * dir[0] < self.chessboard_size and 0 <= y + i * dir[1] < self.chessboard_size]
             for score_item in score_item_list:
                 if match(score_item[0] * -role, dest):
@@ -163,8 +169,8 @@ class AI(object):
                                      alpha, beta, depth + 1) - depth
                 v = max(v, wait_queue[action])
                 state[action] = COLOR_NONE
-                if v >= beta:
-                    return v
+                # if v >= beta:
+                #     return v
                 alpha = max(alpha, v)
             return v
 
@@ -176,12 +182,12 @@ class AI(object):
             wait_queue = dict()
             for action in self.get_actions(state):
                 state[action] = -self.color
-                wait_queue[action] = max_value(state, action,
-                           alpha, beta, depth + 1) - depth
+                wait_queue[action] = -max_value(state, action,
+                           alpha, beta, depth + 1) + depth
                 v = min(v, wait_queue[action])
                 state[action] = COLOR_NONE
-                if v <= alpha:
-                    return v
+                # if v <= alpha:
+                #     return v
                 beta = min(beta, v)
             return v
 
