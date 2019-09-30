@@ -153,10 +153,11 @@ class AI(object):
         competitor_score, self_score = self.utility(action, state)
         # attack_flag represent if current role is being attacked
         attack_flag = self_score < competitor_score
-        if attack_flag:
-            return competitor_score, attack_flag
-        else:
-            return self_score, attack_flag
+        return competitor_score + self_score, attack_flag
+        # if attack_flag:
+        #     return competitor_score, attack_flag
+        # else:
+        #     return self_score, attack_flag
         # final_score = max(self_score, competitor_score)
         # if state[action[0]][action[1]] != self.color:
         #     return -final_score
@@ -185,31 +186,31 @@ class AI(object):
 
 
 
-    def alpha_beta_cutoff_search(self, state, d=5, cutoff_test=None, eval_fn=None):
+    def alpha_beta_cutoff_search(self, state, d=3, cutoff_test=None, eval_fn=None):
         infinity = 1e300
         level_filter_num = [5, 5, 5, 5, 5,]
         # player = game.to_move(state)
 
         def max_value(state, action, alpha, beta, depth):
-            hash_v = self.query_hash(state)
-            if hash_v in self.board_map.keys():
-                return self.board_map[hash_v]
+            # hash_v = self.query_hash(state)
+            # if hash_v in self.board_map.keys():
+            #     return self.board_map[hash_v]
 
             if cutoff_test(state, action, depth):
                 res = eval_fn(state, action)
-                self.board_map[hash_v] = res
+                # self.board_map[hash_v] = res
                 return res
 
             v = -infinity
             wait_queue = dict()
             best_action = None
-            for action in self.get_actions(state, level_filter_num[depth]):
+            for action, h in self.get_actions(state, level_filter_num[depth]):
                 state[action] = self.color
                 score, attack = min_value(state, action, alpha, beta, depth + 1)
                 if attack:
-                    wait_queue[action] = -score
+                    wait_queue[action] = -score-h
                 else:
-                    wait_queue[action] = score
+                    wait_queue[action] = score+h
 
                 # if info[1]:
                 #     wait_queue[action] = -info[0]
@@ -224,33 +225,33 @@ class AI(object):
                     return wait_queue[action], False
                 alpha = max(alpha, score)
             if best_action:
-                self.board_map[hash_v] = (wait_queue[best_action], False)
+                # self.board_map[hash_v] = (wait_queue[best_action], False)
                 return wait_queue[best_action], False
             else:
-                self.board_map[hash_v] = (v, False)
+                # self.board_map[hash_v] = (v, False)
                 return v, False
 
         def min_value(state, action, alpha, beta, depth):
 
-            hash_v = self.query_hash(state)
-            if hash_v in self.board_map.keys():
-                return self.board_map[hash_v]
+            # hash_v = self.query_hash(state)
+            # if hash_v in self.board_map.keys():
+            #     return self.board_map[hash_v]
 
             if cutoff_test(state, action, depth):
                 res = eval_fn(state, action)
-                self.board_map[hash_v] = res
+                # self.board_map[hash_v] = res
                 return res
 
             v = infinity
             wait_queue = dict()
             best_action = None
-            for action in self.get_actions(state, level_filter_num[depth]):
+            for action, h in self.get_actions(state, level_filter_num[depth]):
                 state[action] = -self.color
                 score, attack = max_value(state, action, alpha, beta, depth + 1)
                 if attack:
-                    wait_queue[action] = -score
+                    wait_queue[action] = -score - h
                 else:
-                    wait_queue[action] = score
+                    wait_queue[action] = score + h
 
                 # wait_queue[action] = -max_value(state, action,
                 #            alpha, beta, depth + 1) + depth
@@ -263,10 +264,10 @@ class AI(object):
                     return wait_queue[action], False
                 beta = min(beta, score)
             if best_action:
-                self.board_map[hash_v] = wait_queue[best_action], False
+                # self.board_map[hash_v] = wait_queue[best_action], False
                 return wait_queue[best_action], False
             else:
-                self.board_map[hash_v] = v, False
+                # self.board_map[hash_v] = v, False
                 return v, False
 
         cutoff_test = (cutoff_test or
@@ -279,9 +280,10 @@ class AI(object):
         best_action = None
         wait_queue = dict()
 
-        for action in self.get_actions(state, level_filter_num[0]):
+        for action, h in self.get_actions(state, level_filter_num[0]):
             state[action] = self.color
             v, _ = min_value(state, action, best_score, beta, 1)
+            v = v + h
             state[action] = COLOR_NONE
             wait_queue[action] = v
             if v > best_score:
@@ -316,7 +318,7 @@ class AI(object):
 
         action_score_list = list(map(cac_score, actions))
         action_score_list.sort(key=lambda x:x[1], reverse=True)
-        return np.array(action_score_list)[:, 0][0:filter_num]
+        return action_score_list[0:filter_num]
 
     def get_childs(self, node):
         res = []
