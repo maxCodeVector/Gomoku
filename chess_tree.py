@@ -140,12 +140,12 @@ class AI(object):
 
     def eval_fn(self, state, action):
         """
-        evaluate current state if do this action, noted that this action has been done, but it may be different from
-        function terminal_test
+        evaluate current state if do this action, noted that this action must has been done
         :param state: in this case, state is current chess board
         :param action: the next position that a player want to go, format:(x, y, role)
         :return: a number represented current score
         """
+        assert state[action] != 0
         competitor_score, self_score = self.utility(action, state)
         # attack_flag represent if current role is being attacked
         attack_flag = self_score < competitor_score
@@ -179,7 +179,6 @@ class AI(object):
 
             v = -infinity
             wait_queue = dict()
-            attack_queue = dict
             best_action = None
             for action in self.get_actions(state):
                 state[action] = self.color
@@ -198,9 +197,9 @@ class AI(object):
                     best_action = action
                     v = score
                 state[action] = COLOR_NONE
-                if v >= beta:
-                    return v, False
-                alpha = max(alpha, v)
+                # if v >= beta:
+                #     return wait_queue[action], False
+                alpha = max(alpha, wait_queue[action])
             return wait_queue[best_action], False
 
         def min_value(state, action, alpha, beta, depth):
@@ -209,6 +208,7 @@ class AI(object):
 
             v = infinity
             wait_queue = dict()
+            best_action = None
             for action in self.get_actions(state):
                 state[action] = -self.color
                 score, attack = max_value(state, action, alpha, beta, depth + 1)
@@ -219,12 +219,15 @@ class AI(object):
 
                 # wait_queue[action] = -max_value(state, action,
                 #            alpha, beta, depth + 1) + depth
-                v = min(v, wait_queue[action])
+                if v > score:
+                    v = score
+                    best_action = action
+                # v = min(v, wait_queue[action])
                 state[action] = COLOR_NONE
-                if v <= alpha:
-                    return v, False
-                beta = min(beta, v)
-            return v, False
+                # if v <= alpha:
+                #     return wait_queue[action], False
+                beta = min(beta, wait_queue[action])
+            return wait_queue[best_action], False
 
         cutoff_test = (cutoff_test or
                        (lambda state, action, depth: depth >= d or self.terminal_test(state, action)))
@@ -246,7 +249,7 @@ class AI(object):
                 best_action = action
         return best_action
 
-    def get_actions(self, chessboard, filter=10):
+    def get_actions(self, chessboard, filter=5):
         actions = []
         checked = np.zeros((self.chessboard_size, self.chessboard_size), dtype=int)
         idx = np.where(chessboard != COLOR_NONE)
@@ -258,10 +261,20 @@ class AI(object):
                     actions.append(child)
                     checked[child[0]][child[1]] = 1
 
-        return self.action_filter(actions)
+        return self.action_filter(chessboard, actions, filter)
 
-    def action_filter(self, actions):
-        return actions
+    def action_filter(self, state, actions, filter_num):
+
+        def cac_score(action):
+            role = state[action]
+            state[action] = self.color
+            score, _ = self.eval_fn(state, action)
+            state[action] = role
+            return [action, score]
+
+        action_score_list = list(map(cac_score, actions))
+        action_score_list.sort(key=lambda x:x[1], reverse=True)
+        return np.array(action_score_list)[:, 0][0:filter_num]
 
     def get_childs(self, node):
         res = []
