@@ -185,6 +185,81 @@ class GenerateTest(unittest.TestCase):  # 继承unittest.TestCase
         res = ai.candidate_list[-1]
         assert res == (3, 3)
 
+class AdvanceTest(unittest.TestCase):  # 继承unittest.TestCase
+
+    def test1(self):
+        chessboard = np.zeros((15, 15), dtype=np.int)
+        chessboard[2, 2] = 1
+        chessboard[3, 3] = 1
+        chessboard[4, 4] = 1
+        chessboard[5, 6] = 1
+        chessboard[5, 8] = 1
+        chessboard[1:3, 11] = -1
+        chessboard[3, 9:11] = -1
+        chessboard[6, 13] = -1
+
+        ai = chess_tree.AI(15, chess_tree.COLOR_BLACK, 5)
+        ai.go(chessboard)
+        res = ai.candidate_list[-1]
+        assert res in {(5, 5)}
+
+    def test2(self):
+        chessboard = np.zeros((15, 15), dtype=np.int)
+        chessboard[2, 2:4] = 1
+        chessboard[4, 1:3] = 1
+        chessboard[1, 10:12] = -1
+        chessboard[2, 10] = -1
+        chessboard[4, 12] = -1
+
+        ai = chess_tree.AI(15, chess_tree.COLOR_BLACK, 5)
+        ai.go(chessboard)
+        res = ai.candidate_list[-1]
+        assert res in {(1, 9)}
+
+    def test3(self):
+        chessboard = np.zeros((15, 15), dtype=np.int)
+        chessboard[2, 2] = 1
+        chessboard[2, 4] = 1
+        chessboard[3, 2:4] = 1
+        chessboard[5, 2] = 1
+        chessboard[1, 10:12] = -1
+        chessboard[2, 10] = -1
+        chessboard[4, 12:14] = -1
+
+        ai = chess_tree.AI(15, chess_tree.COLOR_BLACK, 5)
+        ai.go(chessboard)
+        res = ai.candidate_list[-1]
+        assert res in {(4, 2)}
+
+    def test4(self):
+        chessboard = np.zeros((15, 15), dtype=np.int)
+        chessboard[2:5, 2] = 1
+        chessboard[6, 3:5] = 1
+        chessboard[1, 10:12] = -1
+        chessboard[2, 10] = -1
+        chessboard[4, 12:14] = -1
+
+        ai = chess_tree.AI(15, chess_tree.COLOR_BLACK, 5)
+        ai.go(chessboard)
+        res = ai.candidate_list[-1]
+        assert res in {(5, 2)}
+
+
+    def test5(self):
+        chessboard = np.zeros((15, 15), dtype=np.int)
+        chessboard[1, 3] = 1
+        chessboard[2, 2] = 1
+        chessboard[2, 5] = 1
+        chessboard[3:5, 3] = 1
+        chessboard[1, 11:13] = -1
+        chessboard[2, 11:13] = -1
+        chessboard[5, 13] = -1
+
+        ai = chess_tree.AI(15, chess_tree.COLOR_BLACK, 5)
+        ai.go(chessboard)
+        res = ai.candidate_list[-1]
+        assert res in {(2, 3)}
+
 
 if __name__ == '__main__':
     check_terminal()
@@ -196,6 +271,7 @@ if __name__ == '__main__':
     # 此用法可以同时测试多个类
     suite1 = unittest.TestLoader().loadTestsFromTestCase(StopTest)
     suite2 = unittest.TestLoader().loadTestsFromTestCase(GenerateTest)
-    suite = unittest.TestSuite([suite1, suite2])
+    suite3 = unittest.TestLoader().loadTestsFromTestCase(AdvanceTest)
+    suite = unittest.TestSuite([ suite3,])
     unittest.TextTestRunner(verbosity=2).run(suite)
     # print("all test passed!")

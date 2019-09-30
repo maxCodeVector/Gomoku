@@ -21,7 +21,7 @@ def match(pattern, dest):
     """
     pattern_len = len(pattern)
     for i in range(len(dest) - pattern_len + 1):
-        if np.where(pattern ^ dest[i:i + pattern_len] == 0)[0].shape[0] == pattern_len:
+        if np.where(pattern - dest[i:i + pattern_len] == 0)[0].shape[0] == pattern_len:
             return True
     return False
 
@@ -38,6 +38,10 @@ class AI(object):
         # You need add your decision into your candidate_list. System will get the end of
         # your candidate_list as your decision .
         self.candidate_list = []
+        self.board_map = dict()
+
+        self.white = np.random.randint(0, 100000, size=(chessboard_size, chessboard_size))
+        self.black = np.random.randint(0, 100000, size=(chessboard_size, chessboard_size))
 
     # The input is current chessboard.
     def go(self, chessboard):
@@ -165,22 +169,41 @@ class AI(object):
         # if()
         pass
 
+    def query_hash(self, chessboard:np.ndarray):
+        hash_value = 0
+        idx = np.where(chessboard == COLOR_WHITE)
+        idx = list(zip(idx[0], idx[1]))
+        for pos in idx:
+            hash_value ^= self.white[pos]
+
+        idx = np.where(chessboard == COLOR_BLACK)
+        idx = list(zip(idx[0], idx[1]))
+        for pos in idx:
+            hash_value ^= self.black[pos]
+
+        return hash_value
 
 
 
-    def alpha_beta_cutoff_search(self, state, d=3, cutoff_test=None, eval_fn=None):
+    def alpha_beta_cutoff_search(self, state, d=5, cutoff_test=None, eval_fn=None):
         infinity = 1e300
-
+        level_filter_num = [5, 5, 5, 5, 5,]
         # player = game.to_move(state)
 
         def max_value(state, action, alpha, beta, depth):
+            hash_v = self.query_hash(state)
+            if hash_v in self.board_map.keys():
+                return self.board_map[hash_v]
+
             if cutoff_test(state, action, depth):
-                return eval_fn(state, action)
+                res = eval_fn(state, action)
+                self.board_map[hash_v] = res
+                return res
 
             v = -infinity
             wait_queue = dict()
             best_action = None
-            for action in self.get_actions(state):
+            for action in self.get_actions(state, level_filter_num[depth]):
                 state[action] = self.color
                 score, attack = min_value(state, action, alpha, beta, depth + 1)
                 if attack:
@@ -197,19 +220,31 @@ class AI(object):
                     best_action = action
                     v = score
                 state[action] = COLOR_NONE
-                # if v >= beta:
-                #     return wait_queue[action], False
-                alpha = max(alpha, wait_queue[action])
-            return wait_queue[best_action], False
+                if v >= beta:
+                    return wait_queue[action], False
+                alpha = max(alpha, score)
+            if best_action:
+                self.board_map[hash_v] = (wait_queue[best_action], False)
+                return wait_queue[best_action], False
+            else:
+                self.board_map[hash_v] = (v, False)
+                return v, False
 
         def min_value(state, action, alpha, beta, depth):
+
+            hash_v = self.query_hash(state)
+            if hash_v in self.board_map.keys():
+                return self.board_map[hash_v]
+
             if cutoff_test(state, action, depth):
-                return eval_fn(state, action)
+                res = eval_fn(state, action)
+                self.board_map[hash_v] = res
+                return res
 
             v = infinity
             wait_queue = dict()
             best_action = None
-            for action in self.get_actions(state):
+            for action in self.get_actions(state, level_filter_num[depth]):
                 state[action] = -self.color
                 score, attack = max_value(state, action, alpha, beta, depth + 1)
                 if attack:
@@ -224,10 +259,15 @@ class AI(object):
                     best_action = action
                 # v = min(v, wait_queue[action])
                 state[action] = COLOR_NONE
-                # if v <= alpha:
-                #     return wait_queue[action], False
-                beta = min(beta, wait_queue[action])
-            return wait_queue[best_action], False
+                if v <= alpha:
+                    return wait_queue[action], False
+                beta = min(beta, score)
+            if best_action:
+                self.board_map[hash_v] = wait_queue[best_action], False
+                return wait_queue[best_action], False
+            else:
+                self.board_map[hash_v] = v, False
+                return v, False
 
         cutoff_test = (cutoff_test or
                        (lambda state, action, depth: depth >= d or self.terminal_test(state, action)))
@@ -239,7 +279,7 @@ class AI(object):
         best_action = None
         wait_queue = dict()
 
-        for action in self.get_actions(state):
+        for action in self.get_actions(state, level_filter_num[0]):
             state[action] = self.color
             v, _ = min_value(state, action, best_score, beta, 1)
             state[action] = COLOR_NONE
@@ -249,7 +289,7 @@ class AI(object):
                 best_action = action
         return best_action
 
-    def get_actions(self, chessboard, filter=5):
+    def get_actions(self, chessboard, filter=3):
         actions = []
         checked = np.zeros((self.chessboard_size, self.chessboard_size), dtype=int)
         idx = np.where(chessboard != COLOR_NONE)
@@ -261,6 +301,8 @@ class AI(object):
                     actions.append(child)
                     checked[child[0]][child[1]] = 1
 
+        if len(actions) <= 1:
+            return actions
         return self.action_filter(chessboard, actions, filter)
 
     def action_filter(self, state, actions, filter_num):
